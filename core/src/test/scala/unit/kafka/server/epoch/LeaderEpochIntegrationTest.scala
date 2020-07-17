@@ -35,7 +35,7 @@ import org.junit.Assert._
 import org.junit.{After, Test}
 import org.apache.kafka.common.requests.{EpochEndOffset, OffsetsForLeaderEpochRequest, OffsetsForLeaderEpochResponse}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.collection.Map
 import scala.collection.mutable.ListBuffer
 
@@ -239,9 +239,9 @@ class LeaderEpochIntegrationTest extends ZooKeeperTestHarness with Logging {
     var result = true
     for (topic <- List(topic1, topic2)) {
       val tp = new TopicPartition(topic, 0)
-      val leo = broker.getLogManager().getLog(tp).get.logEndOffset
+      val leo = broker.getLogManager.getLog(tp).get.logEndOffset
       result = result && leo > 0 && brokers.forall { broker =>
-        broker.getLogManager().getLog(tp).get.logSegments.iterator.forall { segment =>
+        broker.getLogManager.getLog(tp).get.logSegments.iterator.forall { segment =>
           if (segment.read(minOffset, Integer.MAX_VALUE) == null) {
             false
           } else {
@@ -274,8 +274,9 @@ class LeaderEpochIntegrationTest extends ZooKeeperTestHarness with Logging {
   private[epoch] class TestFetcherThread(sender: BlockingSend) extends Logging {
 
     def leaderOffsetsFor(partitions: Map[TopicPartition, Int]): Map[TopicPartition, EpochEndOffset] = {
-      val partitionData = partitions.mapValues(
-        new OffsetsForLeaderEpochRequest.PartitionData(Optional.empty(), _)).toMap
+      val partitionData = partitions.map { case (k, v) =>
+        k -> new OffsetsForLeaderEpochRequest.PartitionData(Optional.empty(), v)
+      }
 
       val request = OffsetsForLeaderEpochRequest.Builder.forFollower(
         ApiKeys.OFFSET_FOR_LEADER_EPOCH.latestVersion, partitionData.asJava, 1)

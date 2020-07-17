@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -185,7 +186,6 @@ public class ListOffsetRequest extends AbstractRequest {
 
     public static final class PartitionData {
         public final long timestamp;
-        @Deprecated
         public final int maxNumOffsets; // only supported in v0
         public final Optional<Integer> currentLeaderEpoch;
 
@@ -195,13 +195,26 @@ public class ListOffsetRequest extends AbstractRequest {
             this.currentLeaderEpoch = currentLeaderEpoch;
         }
 
-        @Deprecated
+        // For V0
         public PartitionData(long timestamp, int maxNumOffsets) {
             this(timestamp, maxNumOffsets, Optional.empty());
         }
 
         public PartitionData(long timestamp, Optional<Integer> currentLeaderEpoch) {
             this(timestamp, 1, currentLeaderEpoch);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof PartitionData)) return false;
+            PartitionData other = (PartitionData) obj;
+            return this.timestamp == other.timestamp &&
+                this.currentLeaderEpoch.equals(other.currentLeaderEpoch);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(timestamp, currentLeaderEpoch);
         }
 
         @Override
@@ -269,17 +282,7 @@ public class ListOffsetRequest extends AbstractRequest {
             responseData.put(partition, partitionError);
         }
 
-        switch (version()) {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-                return new ListOffsetResponse(throttleTimeMs, responseData);
-            default:
-                throw new IllegalArgumentException(String.format("Version %d is not valid. Valid versions for %s are 0 to %d",
-                        versionId, this.getClass().getSimpleName(), ApiKeys.LIST_OFFSETS.latestVersion()));
-        }
+        return new ListOffsetResponse(throttleTimeMs, responseData);
     }
 
     public int replicaId() {
